@@ -118,7 +118,7 @@ func NewRotation(alpha float64, axis Vec) Rotation {
 	return Rotation(q)
 }
 
-// Rotate returns the rotated vector according to the definition of rot.
+// Rotate returns the rotated vector according to the definition of r.
 func (r Rotation) Rotate(p Vec) Vec {
 	if r.isIdentity() {
 		return p
@@ -126,6 +126,58 @@ func (r Rotation) Rotate(p Vec) Vec {
 	qq := quat.Number(r)
 	pp := quat.Mul(quat.Mul(qq, raise(p)), quat.Conj(qq))
 	return Vec{X: pp.Imag, Y: pp.Jmag, Z: pp.Kmag}
+}
+
+// Matrix returns the 3x3 rotation matrix corresponding to this rotation.
+//
+// See:
+//  https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
+func (r Rotation) ToMatrix() []float64 {
+	var (
+		w = r.Real
+		x = r.Imag
+		y = r.Jmag
+		z = r.Kmag
+
+		w2 = w * w
+		x2 = x * x
+		y2 = y * y
+		z2 = z * z
+
+		n = w2 + x2 + y2 + z2
+		s = 0.0
+	)
+
+	if n != 0 {
+		s = 2 / n
+	}
+
+	var (
+		wx = s * w * x
+		wy = s * w * y
+		wz = s * w * z
+
+		xx = s * x * x
+		xy = s * x * y
+		xz = s * x * z
+
+		yy = s * y * y
+		yz = s * y * z
+
+		zz = s * z * z
+	)
+
+	return []float64{
+		1 - (yy + zz), xy - wz, xz + wy,
+		xy + wz, 1 - (xx + zz), yz - wx,
+		xz - wy, yz + wx, 1 - (xx + yy),
+	}
+
+	//	return []float64{
+	//		1 - 2*y2 - 2*z2, 2*xy - 2*zw,
+	//		2*xy + 2*zw, 1 - 2*x2 - 2*z2, 2*yz - 2*xw,
+	//		2*xz - 2*yw, 2*yz + 2*xw, 1 - 2*x2 - 2*y2,
+	//	}
 }
 
 func (r Rotation) isIdentity() bool {
